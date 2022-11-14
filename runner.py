@@ -42,26 +42,47 @@ IMG2_POS = (0, -150)
 
 TEXT_END_CONTENT = "Thank you for participating! Press [esc] to exit."
 
-ISI = 1  # inter-stimulus interval, seconds
-FB_DURATION = 2
+ISI = 0.5  # inter-stimulus interval, seconds
+FB_DURATION = 1
 RXN_DURATION = 2
+
+FB_LATE = "[space] was not pressed in time"
+FB_WRONG = "[space] was pressed incorrectly"
 
 # GLOBALS #
 window = Window((WIDTH, HEIGHT), color="white", fullscr=True, units="pix")
 file = open("data.csv", "w")
-# TODO: file-writing stuff
+file.write("condition,rt,correct\n")
 state = STATE_INTRO
 feedback_timer = None
 isi_timer = None
 reaction_timer = None
 
-trial = 0  # number of the trial we're on (index)
-trials = [True, True, False] * 3
-shuffle(trials)
-
 feedback = ""
 
+trial = 0  # number of the trial we're on (index)
+trials = [True, True, False]  # * 3
+shuffle(trials)
+
+text1 = TextBox2(win=window, pos=TEXT1_POS, text=TEXT1_CONTENT,
+                 **TEXT_ARGS)
+text2 = TextBox2(win=window, pos=TEXT2_POS, text=TEXT2_CONTENT,
+                 **TEXT_ARGS)
+text3 = TextBox2(win=window, pos=TEXT3_POS, text=TEXT3_CONTENT,
+                 **TEXT_ARGS)
+img1 = ImageStim(win=window, image="go.png", size=IMG_SIZE,
+                 pos=IMG1_POS)
+img2 = ImageStim(win=window, image="nogo.png", size=IMG_SIZE,
+                 pos=IMG2_POS)
+end_text = TextBox2(win=window, pos=(0, 0), text=TEXT_END_CONTENT,
+                    **TEXT_ARGS)
+
 # FUNCTIONS #
+# return the reaction time (reads clock value)
+
+
+def formatTime():
+    return str(2-reaction_timer.getTime())[:5]
 
 
 # MAINLOOP #
@@ -73,25 +94,32 @@ while True:
         core.quit()
 
     if state == STATE_GO:
-        img1 = ImageStim(win=window, image="go.png", size=IMG_SIZE,
-                         pos=(0, 0))
         img1.draw()
         if "space" in keys:
-            # TODO: log in file
-            feedback = "Space was pressed correctly"
-            state = STATE_FEEDBACK
-            feedback_timer = CountdownTimer(FB_DURATION)
+            file.write("go,"+formatTime()+",1\n")
+            state = STATE_ISI
+            isi_timer = CountdownTimer(FB_DURATION)
             continue
         if reaction_timer.getTime() < 0:
-            # TODO: log in file
-            feedback = "Space was not pressed in time"
+            file.write("go,2,0\n")
+            feedback = FB_LATE
             state = STATE_FEEDBACK
             feedback_timer = CountdownTimer(FB_DURATION)
             continue
 
     if state == STATE_NOGO:
-        pass
-        # TODO: left off here
+        img2.draw()
+        if "space" in keys:
+            file.write("nogo,"+formatTime()+",0\n")
+            feedback = FB_WRONG
+            state = STATE_FEEDBACK
+            feedback_timer = CountdownTimer(FB_DURATION)
+            continue
+        if reaction_timer.getTime() < 0:
+            file.write("nogo,2,1\n")
+            state = STATE_ISI
+            isi_timer = CountdownTimer(FB_DURATION)
+            continue
 
     if state == STATE_FEEDBACK:
         if feedback_timer.getTime() < 0:
@@ -107,39 +135,22 @@ while True:
         if trial == len(trials):
             state = STATE_END
             continue
-        # if trials[trial]:
-        #     img1 = ImageStim(win=window, image="go.png", size=IMG_SIZE,
-        #                      pos=IMG1_POS)
-        #     img1.draw()
-        # else:
-        #     pass
-        state = STATE_GO
-        img1 = ImageStim(win=window, image="go.png", size=IMG_SIZE,
-                         pos=(0, 0))
-        img1.draw()
+        state = STATE_GO if trials[trial] else STATE_NOGO
+        trial += 1
         reaction_timer = CountdownTimer(RXN_DURATION)
+        continue
 
     if state == STATE_END:
-        end_text = TextBox2(win=window, pos=(0, 0), text=TEXT_END_CONTENT,
-                            **TEXT_ARGS)
+        end_text.draw()
 
     if state == STATE_INTRO:
-        text1 = TextBox2(win=window, pos=TEXT1_POS, text=TEXT1_CONTENT,
-                         **TEXT_ARGS)
         text1.draw()
-        img1 = ImageStim(win=window, image="go.png", size=IMG_SIZE,
-                         pos=IMG1_POS)
         img1.draw()
-        text2 = TextBox2(win=window, pos=TEXT2_POS, text=TEXT2_CONTENT,
-                         **TEXT_ARGS)
         text2.draw()
-        img2 = ImageStim(win=window, image="nogo.png", size=IMG_SIZE,
-                         pos=IMG2_POS)
         img2.draw()
-        text3 = TextBox2(win=window, pos=TEXT3_POS, text=TEXT3_CONTENT,
-                         **TEXT_ARGS)
         text3.draw()
         if "space" in keys:
+            img1.pos = img2.pos = (0, 0)
             state = STATE_ISI
             isi_timer = CountdownTimer(ISI)
 

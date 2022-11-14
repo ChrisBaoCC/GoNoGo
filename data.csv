@@ -1,0 +1,4 @@
+condition,rt,correct
+go,2,0
+go,1.285,1
+nogo,2,1
